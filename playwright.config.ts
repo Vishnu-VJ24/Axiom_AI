@@ -60,9 +60,7 @@ export default defineConfig({
   projects: USE_BROWSERSTACK
     ? [{ name: 'browserstack-chrome', use: {} }]
     : [
-        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-        { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-        { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+        { name: 'chromium', use: { ...devices['Desktop Chrome'] } }
       ],
 
   /* Start backend + frontend dev servers before tests */

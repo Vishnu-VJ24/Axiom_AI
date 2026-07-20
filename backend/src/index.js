@@ -63,10 +63,9 @@ async function start() {
   // Run badge evaluation after a short delay so the server is responsive first
   if (process.env.NVIDIA_API_KEY) {
     setTimeout(() => {
-      console.log('[startup] Triggering initial badge evaluation...');
-      evaluateAllBadges().catch(err =>
-        console.error('[startup] Badge evaluation error:', err.message)
-      );
+      // Disable badge agent on startup to prevent hitting Nvidia NIM rate limits
+      // console.log('[startup] Triggering initial badge evaluation...');
+      // evaluateAllBadges().catch(err => console.error('[startup] Badge evaluation error:', err.message));
     }, 2000);
   } else {
     console.warn('[startup] ⚠️  NVIDIA_API_KEY not set — badge and QA agents will not function.');
