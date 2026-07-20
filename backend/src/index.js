@@ -61,7 +61,7 @@ async function start() {
   });
 
   // Run badge evaluation after a short delay so the server is responsive first
-  if (process.env.GEMINI_API_KEY) {
+  if (process.env.NVIDIA_API_KEY) {
     setTimeout(() => {
       console.log('[startup] Triggering initial badge evaluation...');
       evaluateAllBadges().catch(err =>
@@ -69,7 +69,7 @@ async function start() {
       );
     }, 2000);
   } else {
-    console.warn('[startup] ⚠️  GEMINI_API_KEY not set — badge and QA agents will not function.');
+    console.warn('[startup] ⚠️  NVIDIA_API_KEY not set — badge and QA agents will not function.');
     console.warn('[startup]    Copy .env.example to .env and add your API key.');
   }
 }

@@ -4,7 +4,7 @@
 //
 // This demonstrates: manual testing → scripted automation → prompt-driven test generation.
 
-import { GoogleGenAI } from '@google/genai';
+import OpenAI from 'openai';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -14,7 +14,10 @@ import { getDb } from '../db/schema.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GENERATED_DIR = path.join(__dirname, '../../../..', 'tests', 'generated');
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.NVIDIA_API_KEY,
+  baseURL: 'https://integrate.api.nvidia.com/v1',
+});
 
 // App context: selectors, routes, and behaviors Claude/Gemini uses to write accurate tests.
 // This acts as the "API documentation" for the QA agent.
@@ -87,11 +90,11 @@ OUTPUT: Return ONLY the raw TypeScript file content. No markdown, no code fences
 
   let generatedCode;
   try {
-    const genResponse = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: generationPrompt,
+    const genResponse = await openai.chat.completions.create({
+      model: 'meta/llama-3.3-70b-instruct',
+      messages: [{ role: 'user', content: generationPrompt }],
     });
-    generatedCode = genResponse.text.trim();
+    generatedCode = genResponse.choices[0].message.content.trim();
     // Strip any markdown fences Gemini may add despite instructions
     generatedCode = generatedCode
       .replace(/^```(?:typescript|ts)?\n?/m, '')
@@ -151,11 +154,11 @@ Write a single paragraph (3-4 sentences) in plain English that:
 
 Be concise — this will be read by a non-technical stakeholder.`;
 
-    const summaryResponse = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: summaryPrompt,
+    const summaryResponse = await openai.chat.completions.create({
+      model: 'meta/llama-3.3-70b-instruct',
+      messages: [{ role: 'user', content: summaryPrompt }],
     });
-    summary = summaryResponse.text.trim();
+    summary = summaryResponse.choices[0].message.content.trim();
   } catch {
     summary = `Test ${status === 'pass' ? 'passed' : 'failed'}. Unable to generate detailed summary.`;
   }

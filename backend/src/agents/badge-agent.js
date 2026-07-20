@@ -21,11 +21,14 @@
 //     - "New Arrival"        → joined < 30 days ago
 //     - "Loyal Explorer"     → purchased from 4+ different categories
 
-import { GoogleGenAI } from '@google/genai';
+import OpenAI from 'openai';
 import { getDb } from '../db/schema.js';
 
-// Initialize Gemini client using the new @google/genai SDK
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Initialize OpenAI client pointing to Nvidia NIM
+const openai = new OpenAI({
+  apiKey: process.env.NVIDIA_API_KEY,
+  baseURL: 'https://integrate.api.nvidia.com/v1',
+});
 
 // Badge color map for consistent UI rendering
 const BADGE_COLORS = {
@@ -184,12 +187,12 @@ Respond ONLY with this JSON structure (no extra text):
   // ── Call Gemini ───────────────────────────────────────────────────────────
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' },
+    const response = await openai.chat.completions.create({
+      model: 'meta/llama-3.3-70b-instruct',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
     });
-    const rawText = response.text.trim();
+    const rawText = response.choices[0].message.content.trim();
     const parsed = JSON.parse(rawText);
     const badgeList = parsed.badges || [];
 
