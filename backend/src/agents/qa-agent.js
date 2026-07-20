@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 import { getDb } from '../db/schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const GENERATED_DIR = path.join(__dirname, '../../../..', 'tests', 'generated');
+const GENERATED_DIR = path.join(__dirname, '../../..', 'tests', 'generated');
 
 const openai = new OpenAI({
   apiKey: process.env.NVIDIA_API_KEY,
@@ -120,7 +120,7 @@ OUTPUT: Return ONLY the raw TypeScript file content. No markdown, no code fences
 
   let rawOutput = '';
   let status = 'pass';
-  const rootDir = path.join(__dirname, '../../../..');
+  const rootDir = path.join(__dirname, '../../..');
 
   try {
     const cmd = `npx playwright test tests/generated/${fileName} --reporter=line --timeout=30000`;
