@@ -108,7 +108,7 @@ All tests run locally by default. BrowserStack is purely additive — no local t
 
 ## 90-Second Demo Script
 
-1. **Open the app** — badges are already on Alex Rivera's products and customer header (VIP, Big Spender). Explain: *"These come from Gemini analyzing the seeded data on startup."*
+1. **Open the app** — badges are already on Vishnu Jayanth's products and customer header (VIP, Big Spender). Explain: *"These come from Gemini analyzing the seeded data on startup."*
 
 2. **Hover a badge** — the tooltip shows Gemini's exact reasoning. *"Not a rule engine — the model decides and explains."*
 

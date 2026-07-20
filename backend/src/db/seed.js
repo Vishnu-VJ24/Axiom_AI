@@ -19,7 +19,7 @@ const PRODUCTS = [
 ];
 
 const CUSTOMERS = [
-  { name: 'Alex Rivera', email: 'alex@demo.axiom', avatar_color: '#6366f1' },
+  { name: 'Vishnu Jayanth', email: 'vishnu@demo.axiom', avatar_color: '#6366f1' },
   { name: 'Jamie Chen', email: 'jamie@demo.axiom', avatar_color: '#ec4899' },
   { name: 'Morgan Patel', email: 'morgan@demo.axiom', avatar_color: '#10b981' },
   { name: 'Taylor Kim', email: 'taylor@demo.axiom', avatar_color: '#f59e0b' },

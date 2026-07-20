@@ -40,13 +40,13 @@ test.describe('Customer Selector', () => {
     await expect(customerName).toContainText('Jamie');
   });
 
-  test('first customer (Alex) should have order history', async ({ page }) => {
+  test('first customer (Vishnu) should have order history', async ({ page }) => {
     await page.goto('/');
 
-    // Alex is auto-selected; his lifetime total should be > $0
+    // Vishnu is auto-selected; his lifetime total should be > $0
     const customerName = page.locator('[data-testid="customer-name"]');
     await expect(customerName).toBeVisible();
-    await expect(customerName).toContainText('Alex');
+    await expect(customerName).toContainText('Vishnu');
   });
 });
 
@@ -61,10 +61,10 @@ test.describe('Cart Operations', () => {
     await expect(cartSidebar).toBeVisible();
   });
 
-  test('should show Alex\'s pre-seeded cart items', async ({ page }) => {
+  test('should show Vishnu\'s pre-seeded cart items', async ({ page }) => {
     await page.goto('/');
 
-    // Alex has a pre-seeded cart with 2 items
+    // Vishnu has a pre-seeded cart with 2 items
     const cartToggle = page.locator('[data-testid="cart-toggle"]');
     await cartToggle.click();
 
@@ -131,7 +131,7 @@ test.describe('Cart Total Calculation', () => {
   test('cart total should display formatted dollar amount', async ({ page }) => {
     await page.goto('/');
 
-    // Alex has a pre-seeded high-value cart
+    // Vishnu has a pre-seeded high-value cart
     await page.locator('[data-testid="cart-toggle"]').click();
     const cartSidebar = page.locator('[data-testid="cart-sidebar"]');
     await expect(cartSidebar).toBeVisible();
