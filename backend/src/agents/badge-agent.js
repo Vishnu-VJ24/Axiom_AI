@@ -21,19 +21,11 @@
 //     - "New Arrival"        → joined < 30 days ago
 //     - "Loyal Explorer"     → purchased from 4+ different categories
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { getDb } from '../db/schema.js';
 
-// Initialize Gemini client — API key comes from .env
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Use gemini-2.0-flash — fast, free tier, great for structured output
-const model = genAI.getGenerativeModel({
-  model: 'gemini-2.0-flash',
-  generationConfig: {
-    responseMimeType: 'application/json', // Force JSON output — no markdown fences
-  },
-});
+// Initialize Gemini client using the new @google/genai SDK
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Badge color map for consistent UI rendering
 const BADGE_COLORS = {
@@ -192,8 +184,12 @@ Respond ONLY with this JSON structure (no extra text):
   // ── Call Gemini ───────────────────────────────────────────────────────────
 
   try {
-    const result = await model.generateContent(prompt);
-    const rawText = result.response.text().trim();
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' },
+    });
+    const rawText = response.text.trim();
     const parsed = JSON.parse(rawText);
     const badgeList = parsed.badges || [];
 

@@ -4,7 +4,7 @@
 //
 // This demonstrates: manual testing → scripted automation → prompt-driven test generation.
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -14,13 +14,7 @@ import { getDb } from '../db/schema.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GENERATED_DIR = path.join(__dirname, '../../../..', 'tests', 'generated');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Model for test generation — needs to produce clean TypeScript code
-const codeModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-// Model for plain-English summaries
-const summaryModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // App context: selectors, routes, and behaviors Claude/Gemini uses to write accurate tests.
 // This acts as the "API documentation" for the QA agent.
@@ -93,8 +87,11 @@ OUTPUT: Return ONLY the raw TypeScript file content. No markdown, no code fences
 
   let generatedCode;
   try {
-    const genResult = await codeModel.generateContent(generationPrompt);
-    generatedCode = genResult.response.text().trim();
+    const genResponse = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: generationPrompt,
+    });
+    generatedCode = genResponse.text.trim();
     // Strip any markdown fences Gemini may add despite instructions
     generatedCode = generatedCode
       .replace(/^```(?:typescript|ts)?\n?/m, '')
@@ -154,8 +151,11 @@ Write a single paragraph (3-4 sentences) in plain English that:
 
 Be concise — this will be read by a non-technical stakeholder.`;
 
-    const summaryResult = await summaryModel.generateContent(summaryPrompt);
-    summary = summaryResult.response.text().trim();
+    const summaryResponse = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: summaryPrompt,
+    });
+    summary = summaryResponse.text.trim();
   } catch {
     summary = `Test ${status === 'pass' ? 'passed' : 'failed'}. Unable to generate detailed summary.`;
   }
