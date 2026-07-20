@@ -21,14 +21,7 @@
 //     - "New Arrival"        → joined < 30 days ago
 //     - "Loyal Explorer"     → purchased from 4+ different categories
 
-import OpenAI from 'openai';
 import { getDb } from '../db/schema.js';
-
-// Initialize OpenAI client pointing to Nvidia NIM
-const openai = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY,
-  baseURL: 'https://integrate.api.nvidia.com/v1',
-});
 
 // Badge color map for consistent UI rendering
 const BADGE_COLORS = {
@@ -187,12 +180,22 @@ Respond ONLY with this JSON structure (no extra text):
   // ── Call Gemini ───────────────────────────────────────────────────────────
 
   try {
-    const response = await openai.chat.completions.create({
-      model: 'meta/llama-3.3-70b-instruct',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
+    const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NVIDIA_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'meta/llama-3.3-70b-instruct',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' }
+      })
     });
-    const rawText = response.choices[0].message.content.trim();
+    const responseData = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(responseData));
+    
+    const rawText = responseData.choices[0].message.content.trim();
     const parsed = JSON.parse(rawText);
     const badgeList = parsed.badges || [];
 

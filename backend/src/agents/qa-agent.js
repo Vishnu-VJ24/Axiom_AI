@@ -4,7 +4,6 @@
 //
 // This demonstrates: manual testing → scripted automation → prompt-driven test generation.
 
-import OpenAI from 'openai';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -13,11 +12,6 @@ import { getDb } from '../db/schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GENERATED_DIR = path.join(__dirname, '../../..', 'tests', 'generated');
-
-const openai = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY,
-  baseURL: 'https://integrate.api.nvidia.com/v1',
-});
 
 // App context: selectors, routes, and behaviors Claude/Gemini uses to write accurate tests.
 // This acts as the "API documentation" for the QA agent.
@@ -90,11 +84,20 @@ OUTPUT: Return ONLY the raw TypeScript file content. No markdown, no code fences
 
   let generatedCode;
   try {
-    const genResponse = await openai.chat.completions.create({
-      model: 'meta/llama-3.3-70b-instruct',
-      messages: [{ role: 'user', content: generationPrompt }],
+    const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NVIDIA_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'meta/llama-3.3-70b-instruct',
+        messages: [{ role: 'user', content: generationPrompt }]
+      })
     });
-    generatedCode = genResponse.choices[0].message.content.trim();
+    const responseData = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(responseData));
+    generatedCode = responseData.choices[0].message.content.trim();
     // Strip any markdown fences Gemini may add despite instructions
     generatedCode = generatedCode
       .replace(/^```(?:typescript|ts)?\n?/m, '')
@@ -154,11 +157,19 @@ Write a single paragraph (3-4 sentences) in plain English that:
 
 Be concise — this will be read by a non-technical stakeholder.`;
 
-    const summaryResponse = await openai.chat.completions.create({
-      model: 'meta/llama-3.3-70b-instruct',
-      messages: [{ role: 'user', content: summaryPrompt }],
+    const summaryRes = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NVIDIA_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'meta/llama-3.3-70b-instruct',
+        messages: [{ role: 'user', content: summaryPrompt }]
+      })
     });
-    summary = summaryResponse.choices[0].message.content.trim();
+    const summaryData = await summaryRes.json();
+    summary = summaryData.choices[0].message.content.trim();
   } catch {
     summary = `Test ${status === 'pass' ? 'passed' : 'failed'}. Unable to generate detailed summary.`;
   }
