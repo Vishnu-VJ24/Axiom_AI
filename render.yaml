@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: axiom-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NVIDIA_API_KEY
+        sync: false
+  
+  - type: web
+    name: axiom-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: axiom-backend
+          envVarKey: RENDER_EXTERNAL_URL
