@@ -22,7 +22,7 @@ This is also a deliberate forward-looking choice: `node:sqlite` was stabilized i
 
 **Why**: WebSockets would be the "correct" production answer for live updates, but they add meaningful complexity: a persistent connection manager, reconnection logic, and a stateful server. For a demo where I need to show live-updating badges to a hiring manager, 4-second polling is visually indistinguishable from real-time and costs maybe 15 lines of code vs. hundreds.
 
-The polling interval (4s) was chosen because Claude badge evaluation takes 1–3 seconds. A 4s poll means badges appear within one or two poll cycles after a cart mutation — fast enough to look live without hammering the server.
+The polling interval (4s) was chosen because Gemini badge evaluation takes 1–3 seconds. A 4s poll means badges appear within one or two poll cycles after a cart mutation — fast enough to look live without hammering the server.
 
 **Tradeoff**: Each poll is a small SQLite read, so the overhead is negligible. In production with 10k users, you'd switch to Server-Sent Events or WebSockets and push badge updates from the server.
 
@@ -36,19 +36,19 @@ The polling interval (4s) was chosen because Claude badge evaluation takes 1–3
 
 The thresholds ($100 for High Value Cart, 3 orders for VIP) were set low enough to trigger on the seed data but high enough to be meaningfully distinguishing. The badge names map to real e-commerce concepts Walmart would recognize (VIP tiers, trending products, bulk buyers).
 
-**Why Claude instead of a rule engine**: A hardcoded rule engine could produce the same badges. But the point of this project is to demonstrate AI agent design — the reasoning field is the key differentiator. Claude doesn't just return `"VIP"`, it returns `"Customer has completed 4 orders totaling $624.95, exceeding the 3-order VIP threshold."` That reasoning is what makes this an agent, not a lookup table. Hover the badge in the UI to see this.
+**Why Gemini instead of a rule engine**: A hardcoded rule engine could produce the same badges. But the point of this project is to demonstrate AI agent design — the reasoning field is the key differentiator. Gemini doesn't just return `"VIP"`, it returns `"Customer has completed 4 orders totaling $624.95, exceeding the 3-order VIP threshold."` That reasoning is what makes this an agent, not a lookup table. Hover the badge in the UI to see this.
 
 ---
 
 ## QA Agent: Test Generation Before Execution
 
-**Choice**: Generate test → save to disk → execute → summarize. Four distinct steps, each with its own Claude call.
+**Choice**: Generate test → save to disk → execute → summarize. Four distinct steps, each with its own Gemini call.
 
-**Why**: Separation of concerns. Each step has a single responsibility and can fail independently. If the test generation succeeds but execution fails (e.g., selector changed), the generated code is still on disk and inspectable. The two-Claude-call design (generation + summarization) also lets me use the same model for both tasks without overloading a single prompt.
+**Why**: Separation of concerns. Each step has a single responsibility and can fail independently. If the test generation succeeds but execution fails (e.g., selector changed), the generated code is still on disk and inspectable. The two-Gemini-call design (generation + summarization) also lets me use the same model for both tasks without overloading a single prompt.
 
-Saving the generated file to `tests/generated/` rather than executing from a string was intentional: it means CI can pick up and replay the last generated test without re-calling Claude, and the file is human-readable and version-inspectable.
+Saving the generated file to `tests/generated/` rather than executing from a string was intentional: it means CI can pick up and replay the last generated test without re-calling Gemini, and the file is human-readable and version-inspectable.
 
-**Tradeoff**: The two Claude calls add latency (~20–30s total). For a synchronous HTTP endpoint, that's a long response time. In production, this would be an async job with polling or WebSocket updates. For a demo, the spinner with "Claude is generating…" messaging actually *shows the work happening*, which is a feature.
+**Tradeoff**: The two Gemini calls add latency (~15–25s total). For a synchronous HTTP endpoint, that's a long response time. In production, this would be an async job with polling or WebSocket updates. For a demo, the spinner with "Gemini is generating…" messaging actually *shows the work happening*, which is a feature.
 
 ---
 
@@ -56,7 +56,7 @@ Saving the generated file to `tests/generated/` rather than executing from a str
 
 **Choice**: A hardcoded `APP_CONTEXT` string in `qa-agent.js` lists the app's key selectors, routes, and behaviors.
 
-**Why**: Claude can't inspect a running browser to discover selectors. Without grounding, it would hallucinate selector names or write tests that can't find elements. The `APP_CONTEXT` acts as a contract between the agent and the application — all `data-testid` attributes in the frontend components are defined here so Claude can write tests that actually work.
+**Why**: Gemini can't inspect a running browser to discover selectors. Without grounding, it would hallucinate selector names or write tests that can't find elements. The `APP_CONTEXT` acts as a contract between the agent and the application — all `data-testid` attributes in the frontend components are defined here so Gemini can write tests that actually work.
 
 This pattern mirrors how real AI-assisted test tools work (Sauce Labs AI, Testim, etc.) — they build a selector registry or visual index of the UI so the model has accurate grounding. We're doing it manually, but the principle is identical.
 

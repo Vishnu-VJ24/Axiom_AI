@@ -1,5 +1,5 @@
 // backend/src/agents/badge-agent.js
-// The Badge Agent: evaluates carts, products, and customers using Claude
+// The Badge Agent: evaluates carts, products, and customers using Google Gemini
 // and assigns structured behavioral badges with reasoning.
 //
 // Badge Taxonomy:
@@ -13,7 +13,7 @@
 //     - "Trending"           → added to 5+ different customer carts
 //     - "Best Seller"        → appears in 5+ completed orders
 //     - "Hidden Gem"         → high price ($80+), low cart frequency (< 3)
-//     - "Bundle Favorite"    → frequently appears alongside another product
+//     - "Bundle Favorite"    → frequently appears alongside other products
 //
 //   CUSTOMER BADGES
 //     - "VIP"                → 3+ completed orders
@@ -21,45 +21,50 @@
 //     - "New Arrival"        → joined < 30 days ago
 //     - "Loyal Explorer"     → purchased from 4+ different categories
 
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getDb } from '../db/schema.js';
 
-// Initialize Anthropic client — API key comes from .env via process.env
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+// Initialize Gemini client — API key comes from .env
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Use gemini-2.0-flash — fast, free tier, great for structured output
+const model = genAI.getGenerativeModel({
+  model: 'gemini-2.0-flash',
+  generationConfig: {
+    responseMimeType: 'application/json', // Force JSON output — no markdown fences
+  },
 });
 
 // Badge color map for consistent UI rendering
 const BADGE_COLORS = {
-  'High Value Cart': '#f59e0b',
-  'Bulk Buyer': '#8b5cf6',
-  'Cross-Category': '#06b6d4',
-  'Deal Seeker': '#10b981',
-  'Trending': '#ef4444',
-  'Best Seller': '#f97316',
-  'Hidden Gem': '#6366f1',
-  'Bundle Favorite': '#ec4899',
-  'VIP': '#eab308',
-  'Big Spender': '#dc2626',
-  'New Arrival': '#22c55e',
-  'Loyal Explorer': '#14b8a6',
+  'High Value Cart':  '#f59e0b',
+  'Bulk Buyer':       '#8b5cf6',
+  'Cross-Category':   '#06b6d4',
+  'Deal Seeker':      '#10b981',
+  'Trending':         '#ef4444',
+  'Best Seller':      '#f97316',
+  'Hidden Gem':       '#6366f1',
+  'Bundle Favorite':  '#ec4899',
+  'VIP':              '#eab308',
+  'Big Spender':      '#dc2626',
+  'New Arrival':      '#22c55e',
+  'Loyal Explorer':   '#14b8a6',
 };
 
 const DEFAULT_COLOR = '#6b7280';
 
 /**
  * Evaluates badges for a given entity.
- * @param {string} entityType - 'cart' | 'product' | 'customer'
- * @param {number} entityId - The ID of the entity (customer_id for carts, product_id, or customer_id)
+ * @param {'cart'|'product'|'customer'} entityType
+ * @param {number} entityId
  */
 export async function evaluateBadges(entityType, entityId) {
   const db = getDb();
   let context;
 
-  // ── Build context payload for Claude ──────────────────────────────────────
+  // ── Build context payload for Gemini ─────────────────────────────────────
 
   if (entityType === 'cart') {
-    // Cart context: items, total, categories
     const cartItems = db.prepare(`
       SELECT ci.quantity, p.name, p.price, p.category,
              (ci.quantity * p.price) AS line_total
@@ -69,7 +74,6 @@ export async function evaluateBadges(entityType, entityId) {
     `).all(entityId);
 
     if (cartItems.length === 0) {
-      // Empty cart — clear existing badges and return
       db.prepare("DELETE FROM badges WHERE entity_type = 'cart' AND entity_id = ?").run(entityId);
       return [];
     }
@@ -77,7 +81,6 @@ export async function evaluateBadges(entityType, entityId) {
     const total = cartItems.reduce((sum, item) => sum + item.line_total, 0);
     const categories = [...new Set(cartItems.map(i => i.category))];
 
-    // Count how many other customers have each product in their cart (for "trending" signal in cart context)
     context = {
       entityType: 'cart',
       cartTotal: total.toFixed(2),
@@ -95,21 +98,19 @@ export async function evaluateBadges(entityType, entityId) {
     const product = db.prepare('SELECT * FROM products WHERE id = ?').get(entityId);
     if (!product) return [];
 
-    // How many carts contain this product?
     const cartFrequency = db.prepare(
-      "SELECT COUNT(DISTINCT customer_id) as count FROM cart_items WHERE product_id = ?"
+      'SELECT COUNT(DISTINCT customer_id) as count FROM cart_items WHERE product_id = ?'
     ).get(entityId).count;
 
-    // How many completed orders contain this product?
     const orderFrequency = db.prepare(
-      "SELECT COUNT(DISTINCT order_id) as count FROM order_items WHERE product_id = ?"
+      'SELECT COUNT(DISTINCT order_id) as count FROM order_items WHERE product_id = ?'
     ).get(entityId).count;
 
     context = {
       entityType: 'product',
       product: { name: product.name, price: product.price, category: product.category },
-      cartFrequency,   // number of customer carts containing this product
-      orderFrequency,  // number of completed orders containing this product
+      cartFrequency,
+      orderFrequency,
     };
 
   } else if (entityType === 'customer') {
@@ -122,7 +123,6 @@ export async function evaluateBadges(entityType, entityId) {
 
     const lifetimeTotal = orders.reduce((sum, o) => sum + o.total, 0);
 
-    // Categories purchased across all orders
     const categoriesResult = db.prepare(`
       SELECT DISTINCT p.category
       FROM order_items oi
@@ -145,68 +145,60 @@ export async function evaluateBadges(entityType, entityId) {
     };
   }
 
-  // ── Call Claude with the badge taxonomy and entity context ────────────────
+  // ── Build the prompt ──────────────────────────────────────────────────────
 
-  const systemPrompt = `You are the Sentinel Badge Agent for an e-commerce platform. 
-Your job is to analyze entity data and assign behavioral badges from the approved taxonomy.
+  const prompt = `You are the Sentinel Badge Agent for an e-commerce platform.
+Analyze the entity data below and assign behavioral badges from the approved taxonomy.
 
 BADGE TAXONOMY:
 
-CART BADGES (use when entityType = "cart"):
+CART BADGES (entityType = "cart"):
 - "High Value Cart": cart total > $100
 - "Bulk Buyer": any single item with quantity >= 3
 - "Cross-Category": items span 3 or more different categories
 - "Deal Seeker": cart contains at least one item priced under $25
 
-PRODUCT BADGES (use when entityType = "product"):
-- "Trending": added to 5 or more different customer carts
-- "Best Seller": appears in 5 or more completed orders
+PRODUCT BADGES (entityType = "product"):
+- "Trending": cartFrequency >= 5 (in 5+ customer carts)
+- "Best Seller": orderFrequency >= 5 (in 5+ completed orders)
 - "Hidden Gem": price >= $80 AND cartFrequency < 3
 - "Bundle Favorite": orderFrequency >= 3 AND price < $50
 
-CUSTOMER BADGES (use when entityType = "customer"):
-- "VIP": 3 or more completed orders
-- "Big Spender": lifetime order total > $300
-- "New Arrival": joined less than 30 days ago
-- "Loyal Explorer": purchased from 4 or more different categories
+CUSTOMER BADGES (entityType = "customer"):
+- "VIP": orderCount >= 3
+- "Big Spender": lifetimeTotal > $300
+- "New Arrival": daysSinceJoined < 30
+- "Loyal Explorer": categoriesPurchased has 4 or more distinct values
 
 RULES:
 - Only assign badges where the condition is clearly met by the data
 - A single entity can receive multiple badges
-- If no badges apply, return an empty array
-- Be precise and honest — don't assign a badge speculatively
+- If no badges apply, return empty array
+- Cite specific numbers in your reasoning
 
-Respond ONLY with valid JSON in this exact format:
+Entity data:
+${JSON.stringify(context, null, 2)}
+
+Respond ONLY with this JSON structure (no extra text):
 {
   "badges": [
     {
       "badge_name": "Name from taxonomy",
-      "reasoning": "One sentence explaining exactly why this badge applies, citing specific numbers."
+      "reasoning": "One sentence citing specific numbers from the data."
     }
   ]
 }`;
 
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 512,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: `Evaluate this entity and return applicable badges as JSON:\n\n${JSON.stringify(context, null, 2)}`,
-        },
-      ],
-    });
+  // ── Call Gemini ───────────────────────────────────────────────────────────
 
-    // Parse Claude's JSON response
-    const rawText = response.content[0].text.trim();
+  try {
+    const result = await model.generateContent(prompt);
+    const rawText = result.response.text().trim();
     const parsed = JSON.parse(rawText);
     const badgeList = parsed.badges || [];
 
-    // ── Persist badges to the database ─────────────────────────────────────
+    // ── Persist badges to the database ───────────────────────────────────
 
-    // First, clear old badges for this entity (we'll replace with fresh evaluation)
     db.prepare(
       'DELETE FROM badges WHERE entity_type = ? AND entity_id = ?'
     ).run(entityType, entityId);
@@ -221,7 +213,7 @@ Respond ONLY with valid JSON in this exact format:
       insertBadge.run(entityType, entityId, badge.badge_name, badge.reasoning, color);
     }
 
-    console.log(`[badge-agent] Evaluated ${entityType} #${entityId}: ${badgeList.length} badge(s) assigned`);
+    console.log(`[badge-agent] ${entityType} #${entityId}: ${badgeList.length} badge(s) assigned`);
     return badgeList;
 
   } catch (err) {
@@ -231,33 +223,26 @@ Respond ONLY with valid JSON in this exact format:
 }
 
 /**
- * Triggers badge evaluation for all entity types.
- * Called on startup to pre-populate badges for seeded data.
+ * Runs badge evaluation for all entities on startup.
  */
 export async function evaluateAllBadges() {
   const db = getDb();
-
   const customers = db.prepare('SELECT id FROM customers').all();
   const products = db.prepare('SELECT id FROM products').all();
 
   console.log('[badge-agent] Running initial full badge evaluation...');
 
-  // Evaluate customer badges
   for (const c of customers) {
     await evaluateBadges('customer', c.id);
   }
 
-  // Evaluate cart badges for customers with active carts
   for (const c of customers) {
     const hasItems = db.prepare(
       'SELECT COUNT(*) as count FROM cart_items WHERE customer_id = ?'
     ).get(c.id).count;
-    if (hasItems > 0) {
-      await evaluateBadges('cart', c.id);
-    }
+    if (hasItems > 0) await evaluateBadges('cart', c.id);
   }
 
-  // Evaluate product badges
   for (const p of products) {
     await evaluateBadges('product', p.id);
   }

@@ -1,10 +1,10 @@
 // backend/src/agents/qa-agent.js
 // The QA Agent: takes a plain-English test instruction, generates a Playwright
-// test file via Claude, executes it, and returns pass/fail + a natural-language summary.
+// test file via Google Gemini, executes it, and returns pass/fail + a plain-English summary.
 //
 // This demonstrates: manual testing → scripted automation → prompt-driven test generation.
 
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -14,12 +14,16 @@ import { getDb } from '../db/schema.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GENERATED_DIR = path.join(__dirname, '../../../..', 'tests', 'generated');
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// App context: key selectors and routes that Claude needs to generate accurate tests.
-// This acts as the "API documentation" Claude uses to write Playwright tests.
+// Model for test generation — needs to produce clean TypeScript code
+const codeModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+// Model for plain-English summaries
+const summaryModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+// App context: selectors, routes, and behaviors Claude/Gemini uses to write accurate tests.
+// This acts as the "API documentation" for the QA agent.
 const APP_CONTEXT = `
 APPLICATION UNDER TEST: Sentinel Demo E-Commerce Store
 
@@ -29,11 +33,11 @@ KEY PAGES & ROUTES:
 - Home / Product Listing: http://localhost:5173/
 - Cart is a slide-in sidebar, not a separate page
 
-KEY UI SELECTORS (use these in your tests):
+KEY UI SELECTORS (always use data-testid where available):
 - Customer selector dropdown: [data-testid="customer-selector"]
 - Individual customer option: [data-testid="customer-option-{id}"] (ids: 1, 2, 3, 4)
 - Product card: [data-testid="product-card-{id}"]
-- Add to cart button on product card: [data-testid="add-to-cart-{id}"]
+- Add to cart button: [data-testid="add-to-cart-{id}"]
 - Cart sidebar toggle button: [data-testid="cart-toggle"]
 - Cart sidebar panel: [data-testid="cart-sidebar"]
 - Cart item row: [data-testid="cart-item-{productId}"]
@@ -55,59 +59,52 @@ NOTABLE BEHAVIORS:
 - Selecting a customer loads their cart and badges
 - Adding items triggers badge re-evaluation (badges update within ~5 seconds)
 - Cart total updates immediately on add/remove
-- The QA agent panel is accessible via a floating button in the bottom-right corner
 
 SAMPLE DATA:
-- Customer 1 (Alex Rivera) has 4 past orders and a pre-loaded high-value cart → expect VIP + Big Spender badges
-- Customer 2 (Jamie Chen) has 2 past orders
-- Products 1-10 are available; product #2 (Ergonomic Chair, $249.99) and #4 (Keyboard, $129.99) are in Alex's cart
+- Customer 1 (Alex Rivera): 4 past orders, pre-loaded high-value cart ($379.98) → VIP + Big Spender badges
+- Customer 2 (Jamie Chen): 2 past orders, moderate cart
+- Products 1-10 available; product #2 = Ergonomic Chair ($249.99), #4 = Keyboard ($129.99)
 `;
 
 /**
  * Generates a Playwright test from a plain-English instruction, runs it, and summarizes results.
- * @param {string} instruction - Plain-English description of what to test
- * @returns {object} { status, generatedCode, rawOutput, summary, filePath }
  */
 export async function runQaAgent(instruction) {
   const db = getDb();
 
-  // ── Step 1: Generate Playwright test via Claude ───────────────────────────
+  // ── Step 1: Generate Playwright test via Gemini ───────────────────────────
 
-  const generationPrompt = `You are a senior QA engineer. Generate a complete, runnable Playwright test for the following instruction:
+  const generationPrompt = `You are a senior QA engineer. Generate a complete, runnable Playwright test file.
 
 INSTRUCTION: ${instruction}
 
 ${APP_CONTEXT}
 
-REQUIREMENTS FOR YOUR TEST:
+REQUIREMENTS:
 - Use TypeScript
-- Import from '@playwright/test'
-- Use descriptive test names
-- Add brief comments explaining each step
-- Use data-testid selectors where available (listed above)
-- Use waitForSelector or expect().toBeVisible() instead of arbitrary waits
-- The test must be self-contained (no imports beyond @playwright/test)
-- Include error handling with meaningful assertions
-- If testing badge updates, wait up to 8000ms as they update via polling
+- Import only from '@playwright/test'  
+- Use descriptive test names with comments on each step
+- Use data-testid selectors from the list above
+- Use waitForSelector or expect().toBeVisible() — never arbitrary waits
+- The test must be fully self-contained
+- If testing badge updates, allow up to 8000ms (badges poll every 4s)
 
-Respond ONLY with the complete TypeScript test file content. No markdown fences, no explanation — just the raw .ts file content.`;
+OUTPUT: Return ONLY the raw TypeScript file content. No markdown, no code fences, no explanation.`;
 
   let generatedCode;
   try {
-    const genResponse = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: generationPrompt }],
-    });
-    generatedCode = genResponse.content[0].text.trim();
-    // Strip markdown fences if Claude added them despite instructions
-    generatedCode = generatedCode.replace(/^```typescript\n?/, '').replace(/^```ts\n?/, '').replace(/\n?```$/, '');
+    const genResult = await codeModel.generateContent(generationPrompt);
+    generatedCode = genResult.response.text().trim();
+    // Strip any markdown fences Gemini may add despite instructions
+    generatedCode = generatedCode
+      .replace(/^```(?:typescript|ts)?\n?/m, '')
+      .replace(/\n?```$/m, '');
   } catch (err) {
     console.error('[qa-agent] Failed to generate test:', err.message);
     throw new Error(`Test generation failed: ${err.message}`);
   }
 
-  // ── Step 2: Save generated test to disk ──────────────────────────────────
+  // ── Step 2: Save to disk ──────────────────────────────────────────────────
 
   fs.mkdirSync(GENERATED_DIR, { recursive: true });
 
@@ -117,16 +114,15 @@ Respond ONLY with the complete TypeScript test file content. No markdown fences,
   const filePath = path.join(GENERATED_DIR, fileName);
 
   fs.writeFileSync(filePath, generatedCode, 'utf-8');
-  console.log(`[qa-agent] Saved generated test: ${filePath}`);
+  console.log(`[qa-agent] Saved: ${fileName}`);
 
-  // ── Step 3: Execute the test with Playwright ─────────────────────────────
+  // ── Step 3: Execute with Playwright ──────────────────────────────────────
 
   let rawOutput = '';
   let status = 'pass';
-
   const rootDir = path.join(__dirname, '../../../..');
+
   try {
-    // Run only the generated file; use -- to separate playwright args from file path
     const cmd = `npx playwright test tests/generated/${fileName} --reporter=line --timeout=30000`;
     rawOutput = execSync(cmd, {
       cwd: rootDir,
@@ -135,58 +131,50 @@ Respond ONLY with the complete TypeScript test file content. No markdown fences,
       stdio: 'pipe',
     });
   } catch (err) {
-    // execSync throws on non-zero exit code (test failure)
     rawOutput = (err.stdout || '') + (err.stderr || '');
     status = rawOutput.includes('Error:') && !rawOutput.includes('failed') ? 'error' : 'fail';
   }
 
-  // ── Step 4: Summarize results via Claude ─────────────────────────────────
+  // ── Step 4: Summarize via Gemini ──────────────────────────────────────────
 
   let summary = '';
   try {
-    const summaryResponse = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 256,
-      messages: [
-        {
-          role: 'user',
-          content: `A Playwright test was generated from this instruction: "${instruction}"
+    const summaryPrompt = `A Playwright test was generated from this instruction: "${instruction}"
 
 The test ${status === 'pass' ? 'PASSED ✅' : 'FAILED ❌'}.
 
-Raw output:
+Raw Playwright output:
 ${rawOutput.slice(0, 2000)}
 
 Write a single paragraph (3-4 sentences) in plain English that:
 1. States what was tested
-2. States whether it passed or failed
-3. If it failed, explains the likely cause in non-technical terms
-4. Notes anything interesting observed
+2. States whether it passed or failed  
+3. If failed, explains the likely cause in non-technical terms
+4. Notes anything interesting
 
-Be concise and clear — this will be read by a non-technical stakeholder.`,
-        },
-      ],
-    });
-    summary = summaryResponse.content[0].text.trim();
-  } catch (err) {
+Be concise — this will be read by a non-technical stakeholder.`;
+
+    const summaryResult = await summaryModel.generateContent(summaryPrompt);
+    summary = summaryResult.response.text().trim();
+  } catch {
     summary = `Test ${status === 'pass' ? 'passed' : 'failed'}. Unable to generate detailed summary.`;
   }
 
-  // ── Step 5: Persist to DB ────────────────────────────────────────────────
+  // ── Step 5: Persist to DB ─────────────────────────────────────────────────
 
   const run = db.prepare(`
     INSERT INTO qa_runs (instruction, generated_file, generated_code, status, raw_output, summary)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(instruction, fileName, generatedCode, status, rawOutput.slice(0, 5000), summary);
 
-  // Keep only the last 50 runs in the DB
+  // Keep only last 50 runs
   db.prepare(`
     DELETE FROM qa_runs WHERE id NOT IN (
       SELECT id FROM qa_runs ORDER BY run_at DESC LIMIT 50
     )
   `).run();
 
-  console.log(`[qa-agent] Test run complete. Status: ${status}`);
+  console.log(`[qa-agent] Run complete. Status: ${status}`);
 
   return {
     id: run.lastInsertRowid,

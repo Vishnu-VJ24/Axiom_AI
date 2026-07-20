@@ -1,8 +1,8 @@
 # 🛡️ Sentinel — AI Badge & QA Agent for E-Commerce
 
-[![CI](https://github.com/YOUR_GITHUB_USERNAME/sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/sentinel/actions/workflows/ci.yml)
+[![CI](https://github.com/Vishnu-VJ24/sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/Vishnu-VJ24/sentinel/actions/workflows/ci.yml)
 
-> A demo e-commerce store with two production-grade AI agents built on top: one that assigns behavioral badges to carts, customers, and products using Claude, and one that takes a plain-English test instruction and generates, runs, and summarizes a real Playwright test — live, in your browser.
+> A demo e-commerce store with two production-grade AI agents built on top: one that assigns behavioral badges to carts, customers, and products using Gemini, and one that takes a plain-English test instruction and generates, runs, and summarizes a real Playwright test — live, in your browser.
 
 ---
 
@@ -12,9 +12,9 @@ Sentinel is a portfolio project demonstrating full-stack + AI agent engineering 
 
 The store sells 10 products. Four seeded customers browse and buy. Two AI agents watch everything:
 
-**Badge Agent** — After every cart mutation or order, it packages the relevant context (cart total, item categories, order history, product popularity) and sends it to Claude with a structured badge taxonomy. Claude returns JSON: which badges apply and *why* — a one-sentence reasoning per badge. Those badges render as colored pills in the UI, updating every 4 seconds via polling.
+**Badge Agent** — After every cart mutation or order, it packages the relevant context (cart total, item categories, order history, product popularity) and sends it to Gemini with a structured badge taxonomy. Gemini returns JSON: which badges apply and *why* — a one-sentence reasoning per badge. Those badges render as colored pills in the UI, updating every 4 seconds via polling.
 
-**QA Agent** — A floating panel lets you type plain English: *"Adding 3 items to the cart should update the badge and total."* The backend sends that instruction plus a precise description of the app's selectors and routes to Claude, which returns a complete TypeScript Playwright test. The backend saves it to disk, runs it with `npx playwright test`, captures stdout/stderr, sends the raw output back to Claude for a plain-English summary, and shows you pass/fail and a paragraph explanation — all within about 30 seconds.
+**QA Agent** — A floating panel lets you type plain English: *"Adding 3 items to the cart should update the badge and total."* The backend sends that instruction plus a precise description of the app's selectors and routes to Gemini, which returns a complete TypeScript Playwright test. The backend saves it to disk, runs it with `npx playwright test`, captures stdout/stderr, sends the raw output back to Gemini for a plain-English summary, and shows you pass/fail and a paragraph explanation — all within about 30 seconds.
 
 ---
 
@@ -24,7 +24,7 @@ The project is a Node.js monorepo with two workspaces:
 
 - **`frontend/`** — React (Vite) SPA. Plain CSS, no UI framework. Communicates with the backend via `/api/*` proxied through Vite's dev server. Polls `/api/badges/bulk` every 4 seconds to keep badge pills live.
 
-- **`backend/`** — Express API. SQLite (via `better-sqlite3`) as the database — zero external dependencies, runs in-process. Two agent modules (`badge-agent.js`, `qa-agent.js`) call the Anthropic SDK. Routes: `/api/products`, `/api/cart`, `/api/customers`, `/api/orders`, `/api/badges`, `/api/qa`.
+- **`backend/`** — Express API. SQLite (via `better-sqlite3`) as the database — zero external dependencies, runs in-process. Two agent modules (`badge-agent.js`, `qa-agent.js`) call the Google Generative AI SDK. Routes: `/api/products`, `/api/cart`, `/api/customers`, `/api/orders`, `/api/badges`, `/api/qa`.
 
 - **`tests/`** — Hand-written Playwright e2e tests in `tests/e2e/`. AI-generated tests land in `tests/generated/` at runtime (gitignored content, folder tracked).
 
@@ -36,13 +36,13 @@ The project is a Node.js monorepo with two workspaces:
 
 ### Prerequisites
 - Node.js 18+
-- An Anthropic API key ([get one here](https://console.anthropic.com/))
+- A Google Gemini API key ([get one here](https://aistudio.google.com/))
 
 ### Installation
 
 ```bash
 # 1. Clone
-git clone https://github.com/YOUR_GITHUB_USERNAME/sentinel.git
+git clone https://github.com/Vishnu-VJ24/sentinel.git
 cd sentinel
 
 # 2. Install all workspace dependencies
@@ -50,7 +50,7 @@ npm install
 
 # 3. Create your .env file
 cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
+# Edit .env and add your GEMINI_API_KEY
 
 # 4. Run (starts backend on :3001 and frontend on :5173 concurrently)
 npm run dev
@@ -96,7 +96,7 @@ All tests run locally by default. BrowserStack is purely additive — no local t
 |--------|-------|
 | React + Vite SPA, CSS design system | Frontend engineering |
 | Express REST API, SQLite, seeded data | Backend engineering |
-| Claude API with structured JSON prompts | LLM/AI integration |
+| Gemini API with structured JSON prompts | LLM/AI integration |
 | Badge taxonomy, entity classification | Agent design & prompt engineering |
 | Playwright test generation from natural language | AI-driven test automation |
 | Live badge polling, toast notifications | Real-time UX patterns |
@@ -108,13 +108,13 @@ All tests run locally by default. BrowserStack is purely additive — no local t
 
 ## 90-Second Demo Script
 
-1. **Open the app** — badges are already on Alex Rivera's products and customer header (VIP, Big Spender). Explain: *"These come from Claude analyzing the seeded data on startup."*
+1. **Open the app** — badges are already on Alex Rivera's products and customer header (VIP, Big Spender). Explain: *"These come from Gemini analyzing the seeded data on startup."*
 
-2. **Hover a badge** — the tooltip shows Claude's exact reasoning. *"Not a rule engine — the model decides and explains."*
+2. **Hover a badge** — the tooltip shows Gemini's exact reasoning. *"Not a rule engine — the model decides and explains."*
 
 3. **Switch to Jamie** — customer badges and cart change. Add the Ergonomic Chair ($249.99) to cart. Open cart — total shows. Wait 4 seconds — a "High Value Cart" badge appears in the cart footer.
 
-4. **Open QA Agent panel** — click a pre-typed example chip: *"Add 2 items to cart and verify the total updates."* Hit Generate & Run. Watch the spinner. In ~20 seconds: pass/fail, Claude's summary, and a "View Generated Code" toggle showing the actual Playwright TypeScript.
+4. **Open QA Agent panel** — click a pre-typed example chip: *"Add 2 items to cart and verify the total updates."* Hit Generate & Run. Watch the spinner. In ~20 seconds: pass/fail, Gemini's summary, and a "View Generated Code" toggle showing the actual Playwright TypeScript.
 
 5. **Close and show the test history** — the last 5 runs are listed. *"Every run saves to disk and the DB. You can replay any of them."*
 
@@ -145,7 +145,7 @@ sentinel/
 │       │   └── seed.js          # Realistic seed data
 │       ├── routes/              # products, customers, cart, orders, badges, qa
 │       └── agents/
-│           ├── badge-agent.js   # Claude badge evaluation + DB persistence
+│           ├── badge-agent.js   # Gemini badge evaluation + DB persistence
 │           └── qa-agent.js      # Test generation, execution, summarization
 ├── tests/
 │   ├── e2e/                     # Hand-written Playwright tests
