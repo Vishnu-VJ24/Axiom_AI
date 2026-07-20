@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Core e2e tests for Sentinel store functionality.
+ * Core e2e tests for Axiom store functionality.
  * These tests verify the product listing, cart operations, and customer switching.
  */
 

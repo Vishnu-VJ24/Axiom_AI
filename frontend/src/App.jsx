@@ -149,7 +149,7 @@ export default function App() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16 }}>
         <div className="spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
-        <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Loading Sentinel…</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Loading Axiom…</div>
       </div>
     );
   }
@@ -160,7 +160,7 @@ export default function App() {
       <header className="header">
         <div className="header-brand">
           <div className="header-logo">🛡️</div>
-          <span className="header-brand-name">Sentinel</span>
+          <span className="header-brand-name">Axiom</span>
           <span className="header-brand-tag">AI-Powered Store</span>
         </div>
 

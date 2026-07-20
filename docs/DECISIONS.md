@@ -1,6 +1,6 @@
-# Sentinel — Engineering Decisions & Tradeoffs
+# Axiom — Engineering Decisions & Tradeoffs
 
-These notes explain the key choices made in building Sentinel. Written for a technical reader — no marketing copy, just the reasoning.
+These notes explain the key choices made in building Axiom. Written for a technical reader — no marketing copy, just the reasoning.
 
 ---
 

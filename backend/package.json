@@ -1,7 +1,7 @@
 {
-  "name": "sentinel-backend",
+  "name": "axiom-backend",
   "version": "1.0.0",
-  "description": "Sentinel backend — Express API + SQLite + AI agents",
+  "description": "Axiom backend — Express API + SQLite + AI agents",
   "main": "src/index.js",
   "type": "module",
   "scripts": {

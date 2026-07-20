@@ -1,6 +1,6 @@
-# 🛡️ Sentinel — AI Badge & QA Agent for E-Commerce
+# 🛡️ Axiom — AI Badge & QA Agent for E-Commerce
 
-[![CI](https://github.com/Vishnu-VJ24/sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/Vishnu-VJ24/sentinel/actions/workflows/ci.yml)
+[![CI](https://github.com/Vishnu-VJ24/axiom/actions/workflows/ci.yml/badge.svg)](https://github.com/Vishnu-VJ24/axiom/actions/workflows/ci.yml)
 
 > A demo e-commerce store with two production-grade AI agents built on top: one that assigns behavioral badges to carts, customers, and products using Gemini, and one that takes a plain-English test instruction and generates, runs, and summarizes a real Playwright test — live, in your browser.
 
@@ -8,7 +8,7 @@
 
 ## What This Is
 
-Sentinel is a portfolio project demonstrating full-stack + AI agent engineering at the intersection of e-commerce, LLM integration, and test automation.
+Axiom is a portfolio project demonstrating full-stack + AI agent engineering at the intersection of e-commerce, LLM integration, and test automation.
 
 The store sells 10 products. Four seeded customers browse and buy. Two AI agents watch everything:
 
@@ -42,8 +42,8 @@ The project is a Node.js monorepo with two workspaces:
 
 ```bash
 # 1. Clone
-git clone https://github.com/Vishnu-VJ24/sentinel.git
-cd sentinel
+git clone https://github.com/Vishnu-VJ24/axiom.git
+cd axiom
 
 # 2. Install all workspace dependencies
 npm install
@@ -125,7 +125,7 @@ All tests run locally by default. BrowserStack is purely additive — no local t
 ## Project Structure
 
 ```
-sentinel/
+axiom/
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx              # Root: customers, products, cart, badges, QA

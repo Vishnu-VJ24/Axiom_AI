@@ -147,7 +147,7 @@ export async function evaluateBadges(entityType, entityId) {
 
   // ── Build the prompt ──────────────────────────────────────────────────────
 
-  const prompt = `You are the Sentinel Badge Agent for an e-commerce platform.
+  const prompt = `You are the Axiom Badge Agent for an e-commerce platform.
 Analyze the entity data below and assign behavioral badges from the approved taxonomy.
 
 BADGE TAXONOMY:

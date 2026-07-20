@@ -56,7 +56,7 @@ async function start() {
   seed();  // Idempotent seed
 
   app.listen(PORT, () => {
-    console.log(`\n🛡️  Sentinel Backend running at http://localhost:${PORT}`);
+    console.log(`\n🛡️  Axiom Backend running at http://localhost:${PORT}`);
     console.log(`   API health: http://localhost:${PORT}/api/health\n`);
   });
 

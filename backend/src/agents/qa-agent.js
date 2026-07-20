@@ -25,7 +25,7 @@ const summaryModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 // App context: selectors, routes, and behaviors Claude/Gemini uses to write accurate tests.
 // This acts as the "API documentation" for the QA agent.
 const APP_CONTEXT = `
-APPLICATION UNDER TEST: Sentinel Demo E-Commerce Store
+APPLICATION UNDER TEST: Axiom Demo E-Commerce Store
 
 BASE URL: http://localhost:5173
 

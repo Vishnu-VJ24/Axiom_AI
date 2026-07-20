@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright configuration for Sentinel.
+ * Playwright configuration for Axiom.
  *
  * Default: runs locally against Chrome.
  * BrowserStack: set USE_BROWSERSTACK=true + BROWSERSTACK_USERNAME + BROWSERSTACK_ACCESS_KEY
@@ -19,8 +19,8 @@ const browserstackWsEndpoint = USE_BROWSERSTACK
       browser_version: 'latest',
       os: 'Windows',
       os_version: '11',
-      name: 'Sentinel E2E',
-      build: `sentinel-ci-${Date.now()}`,
+      name: 'Axiom E2E',
+      build: `axiom-ci-${Date.now()}`,
       'browserstack.username': process.env.BROWSERSTACK_USERNAME,
       'browserstack.accessKey': process.env.BROWSERSTACK_ACCESS_KEY,
     }))}`
