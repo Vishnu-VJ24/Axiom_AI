@@ -224,28 +224,35 @@ Respond ONLY with this JSON structure (no extra text):
 
 /**
  * Runs badge evaluation for all entities on startup.
+ * Uses 4-second delays between calls to stay within Gemini free-tier rate limits.
  */
 export async function evaluateAllBadges() {
   const db = getDb();
   const customers = db.prepare('SELECT id FROM customers').all();
   const products = db.prepare('SELECT id FROM products').all();
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('[badge-agent] Running initial full badge evaluation...');
+  console.log('[badge-agent] Running initial full badge evaluation (staggered for rate limits)...');
 
   for (const c of customers) {
     await evaluateBadges('customer', c.id);
+    await sleep(4000); // 4s gap = safe under 15 RPM free tier
   }
 
   for (const c of customers) {
     const hasItems = db.prepare(
       'SELECT COUNT(*) as count FROM cart_items WHERE customer_id = ?'
     ).get(c.id).count;
-    if (hasItems > 0) await evaluateBadges('cart', c.id);
+    if (hasItems > 0) {
+      await evaluateBadges('cart', c.id);
+      await sleep(4000);
+    }
   }
 
   for (const p of products) {
     await evaluateBadges('product', p.id);
+    await sleep(4000);
   }
 
-  console.log('[badge-agent] ✅ Initial badge evaluation complete.');
+  console.log('[badge-agent] \u2705 Initial badge evaluation complete.');
 }

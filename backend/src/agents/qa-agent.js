@@ -61,9 +61,9 @@ NOTABLE BEHAVIORS:
 - Cart total updates immediately on add/remove
 
 SAMPLE DATA:
-- Customer 1 (Alex Rivera): 4 past orders, pre-loaded high-value cart ($379.98) → VIP + Big Spender badges
-- Customer 2 (Jamie Chen): 2 past orders, moderate cart
-- Products 1-10 available; product #2 = Ergonomic Chair ($249.99), #4 = Keyboard ($129.99)
+- Customer 1 (Vishnu Jayanth): 4 past orders, pre-loaded high-value cart ($379.98) → VIP + Big Spender badges
+  - Customer 2 (Jamie Chen): 2 past orders, moderate cart
+  - Products 1-10 available; product #2 = Ergonomic Chair ($249.99), #4 = Keyboard ($129.99)
 `;
 
 /**
