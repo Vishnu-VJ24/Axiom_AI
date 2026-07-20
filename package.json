@@ -1,0 +1,20 @@
+{
+  "name": "sentinel",
+  "version": "1.0.0",
+  "description": "AI Badge & QA Agent for E-Commerce — portfolio project",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
+    "build": "npm run build --workspace=frontend",
+    "test": "playwright test",
+    "test:ci": "playwright test --reporter=github"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "@playwright/test": "^1.44.0"
+  }
+}

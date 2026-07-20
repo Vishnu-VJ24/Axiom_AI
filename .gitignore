@@ -1,0 +1,13 @@
+.env
+node_modules/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+tests/generated/*.spec.ts
+tests/generated/*.spec.js
+dist/
+frontend/dist/
+.playwright/
+playwright-report/
+test-results/
